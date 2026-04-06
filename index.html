@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Pokédex</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      background: linear-gradient(135deg, #ff4d4d, #3b4cca);
+      color: white;
+      text-align: center;
+    }
+
+    header {
+      padding: 20px;
+      font-size: 2em;
+      font-weight: bold;
+    }
+
+    input {
+      padding: 10px;
+      width: 250px;
+      border-radius: 20px;
+      border: none;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      border-radius: 15px;
+      margin: 10px;
+      padding: 15px;
+      width: 150px;
+      transition: transform 0.2s;
+      cursor: pointer;
+      color: white;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    img {
+      width: 100px;
+    }
+  </style>
+</head>
+<body>
+
+<header>🔥 Mon Pokédex 🔥</header>
+
+<input type="text" id="search" placeholder="Rechercher un Pokémon...">
+
+<div class="container" id="pokedex"></div>
+
+<script>
+const pokedex = document.getElementById("pokedex");
+const searchInput = document.getElementById("search");
+
+let allPokemon = [];
+
+// 🎨 Couleurs
+const typeColors = {
+  fire: "#f08030",
+  water: "#6890f0",
+  grass: "#78c850",
+  electric: "#f8d030",
+  bug: "#a8b820",
+  normal: "#a8a878",
+  poison: "#a040a0",
+  ground: "#e0c068",
+  fairy: "#ee99ac",
+  fighting: "#c03028",
+  psychic: "#f85888",
+  rock: "#b8a038",
+  ghost: "#705898",
+  ice: "#98d8d8",
+  dragon: "#7038f8"
+};
+
+// 🔤 Majuscule
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ⚡ Fetch rapide
+async function fetchPokemon() {
+  pokedex.innerHTML = "<p>Chargement...</p>";
+
+  const promises = [];
+
+  for (let i = 1; i <= 151; i++) {
+    promises.push(
+      fetch(`https://pokeapi.co/api/v2/pokemon/${i}`)
+        .then(res => res.json())
+    );
+  }
+
+  const results = await Promise.all(promises);
+
+  allPokemon = results.map(data => ({
+    name: data.name,
+    image: data.sprites.front_default,
+    type: data.types[0].type.name,
+    stats: data.stats.map(s => ({
+      name: s.stat.name,
+      value: s.base_stat
+    }))
+  }));
+
+  displayPokemon(allPokemon);
+}
+
+// 📦 Affichage
+function displayPokemon(pokemonList) {
+  pokedex.innerHTML = "";
+
+  pokemonList.forEach(pokemon => {
+    const card = document.createElement("div");
+    card.classList.add("card");
+
+    const color = typeColors[pokemon.type] || "#777";
+    card.style.background = color;
+
+    card.innerHTML = `
+      <h3>${capitalize(pokemon.name)}</h3>
+      <img src="${pokemon.image}">
+      <p>${capitalize(pokemon.type)}</p>
+    `;
+
+    card.addEventListener("click", () => showDetails(pokemon));
+
+    pokedex.appendChild(card);
+  });
+}
+
+// 🔍 Recherche
+searchInput.addEventListener("input", (e) => {
+  const value = e.target.value.toLowerCase();
+
+  const filtered = allPokemon.filter(p =>
+    p.name.includes(value) || p.type.includes(value)
+  );
+
+  displayPokemon(filtered);
+});
+
+// 🔍 Popup avec stats
+function showDetails(pokemon) {
+  const popup = document.createElement("div");
+
+  popup.style.position = "fixed";
+  popup.style.top = "0";
+  popup.style.left = "0";
+  popup.style.width = "100%";
+  popup.style.height = "100%";
+  popup.style.background = "rgba(0,0,0,0.8)";
+  popup.style.display = "flex";
+  popup.style.justifyContent = "center";
+  popup.style.alignItems = "center";
+
+  const statsHTML = pokemon.stats.map(stat => {
+    return `
+      <div style="margin:10px 0; text-align:left;">
+        <strong>${stat.name}</strong>
+        <div style="background:#ddd; border-radius:10px;">
+          <div style="
+            width:${stat.value}%;
+            background:#4caf50;
+            color:white;
+            padding:5px;
+            border-radius:10px;
+          ">
+            ${stat.value}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  popup.innerHTML = `
+    <div style="
+      background:white;
+      color:black;
+      padding:25px;
+      border-radius:20px;
+      width:300px;
+      text-align:center;
+    ">
+      <h2>${capitalize(pokemon.name)}</h2>
+      <img src="${pokemon.image}">
+      <p>Type: ${capitalize(pokemon.type)}</p>
+
+      <h3>Stats</h3>
+      ${statsHTML}
+
+      <br>
+      <button onclick="this.parentElement.parentElement.remove()">
+        Fermer
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(popup);
+}
+
+fetchPokemon();
+</script>
+
+</body>
+</html>
